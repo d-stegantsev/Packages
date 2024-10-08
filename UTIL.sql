@@ -15,6 +15,18 @@ create or replace PACKAGE util AS
 
 --Видалення співробітника
     PROCEDURE fire_an_employee(p_employee_id IN NUMBER);
+
+--Зміна атрибутів співробітника
+    PROCEDURE change_attribute_employee(p_employee_id    IN NUMBER,
+                                        p_first_name     IN VARCHAR2 DEFAULT NULL,
+                                        p_last_name      IN VARCHAR2 DEFAULT NULL,
+                                        p_email          IN VARCHAR2 DEFAULT NULL,
+                                        p_phone_number   IN VARCHAR2 DEFAULT NULL,
+                                        p_job_id         IN VARCHAR2 DEFAULT NULL,
+                                        p_salary         IN NUMBER DEFAULT NULL,
+                                        p_commission_pct IN NUMBER DEFAULT NULL,
+                                        p_manager_id     IN NUMBER DEFAULT NULL,
+                                        p_department_id  IN NUMBER DEFAULT NULL);
                             
 END util;
 
@@ -159,6 +171,96 @@ BEGIN
     log_util.log_finish('fire_an_employee');
 
 END fire_an_employee;
+
+--Зміна атрибутів співробітника
+PROCEDURE change_attribute_employee(p_employee_id    IN NUMBER,
+                                    p_first_name     IN VARCHAR2 DEFAULT NULL,
+                                    p_last_name      IN VARCHAR2 DEFAULT NULL,
+                                    p_email          IN VARCHAR2 DEFAULT NULL,
+                                    p_phone_number   IN VARCHAR2 DEFAULT NULL,
+                                    p_job_id         IN VARCHAR2 DEFAULT NULL,
+                                    p_salary         IN NUMBER DEFAULT NULL,
+                                    p_commission_pct IN NUMBER DEFAULT NULL,
+                                    p_manager_id IN  NUMBER DEFAULT NULL,
+                                    p_department_id  IN NUMBER DEFAULT NULL) IS
+                                    
+    v_dynamic_sql VARCHAR2(4000);
+    v_set_string VARCHAR2(4000) := '';
+                                    
+BEGIN
+
+    log_util.log_start('change_attribute_employee');
+    
+    IF p_first_name IS NULL AND 
+       p_last_name IS NULL AND 
+       p_email IS NULL AND 
+       p_phone_number IS NULL AND 
+       p_job_id IS NULL AND 
+       p_salary IS NULL AND 
+       p_commission_pct IS NULL AND 
+       p_manager_id IS NULL AND 
+       p_department_id IS NULL THEN
+          log_util.log_finish('change_attribute_employee'); 
+          raise_application_error(-20001, 'Вкажіть хоча б один параметр для оновлення');                        
+    END IF;
+    
+    IF p_first_name IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.first_name = ''' || p_first_name || ''', ';
+    END IF;
+        
+    IF p_last_name IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.last_name = ''' || p_last_name || ''', ';
+    END IF;
+        
+    IF p_email IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.email = ''' || p_email || ''', ';
+    END IF;
+        
+    IF p_phone_number IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.phone_number = ''' || p_phone_number || ''', ';
+    END IF;
+        
+    IF p_job_id IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.job_id = ''' || p_job_id || ''', ';
+    END IF;
+        
+    IF p_salary IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.salary = ' || p_salary || ', ';
+    END IF;
+        
+    IF p_commission_pct IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.commission_pct = ' || p_commission_pct || ', ';
+    END IF;
+        
+    IF p_manager_id IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.manager_id = ' || p_manager_id || ', ';
+    END IF;
+        
+    IF p_department_id IS NOT NULL THEN
+        v_set_string := v_set_string || 'emp.department_id = ' || p_department_id || ', ';        
+    END IF;   
+    
+    v_set_string := RTRIM(v_set_string, ', ');
+    
+    v_dynamic_sql := 'UPDATE dmitro_h93.employees emp 
+                      SET ' ||v_set_string|| ' 
+                      WHERE emp.employee_id = ' ||p_employee_id;
+                                   
+    BEGIN
+        EXECUTE IMMEDIATE v_dynamic_sql;
+        
+        COMMIT;
+        
+        dbms_output.put_line('У співробітника '||p_employee_id||' успішно оновлені атрибути');
+        
+        EXCEPTION
+            WHEN OTHERS THEN
+                log_util.log_error('change_attribute_employee', sqlerrm);
+    END;
+    
+    log_util.log_finish('change_attribute_employee');
+    
+END change_attribute_employee;
 
 
 END util;
