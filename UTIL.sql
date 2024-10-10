@@ -123,7 +123,6 @@ END check_biz_time;
 --Видалення співробітника
 PROCEDURE fire_an_employee(p_employee_id IN NUMBER) IS
 
-    v_exist_empid   NUMBER;
     v_first_name    VARCHAR2(50);
     v_last_name     VARCHAR2(50);
     v_job_id        VARCHAR2(30);
@@ -134,24 +133,15 @@ BEGIN
 
     log_util.log_start('fire_an_employee');
     
-    SELECT COUNT(*)
-    INTO v_exist_empid
-    FROM dmitro_h93.employees emp
-    WHERE emp.employee_id = p_employee_id;
-    
-    IF v_exist_empid = 0 THEN
-        raise_application_error(-20001,'Переданий співробітник не існує');
-    END IF;
-    
     check_biz_time;
     
     BEGIN
-    
+        
         SELECT emp.first_name, emp.last_name, emp.job_id, emp.department_id, emp.hire_date
         INTO v_first_name, v_last_name, v_job_id, v_department_id, v_hire_date
         FROM dmitro_h93.employees emp
         WHERE emp.employee_id = p_employee_id;
-        
+    
         INSERT INTO dmitro_h93.employees_history (employee_id, first_name, last_name, job_id, department_id, hire_date, termination_date)
         VALUES (p_employee_id, v_first_name, v_last_name, v_job_id, v_department_id, v_hire_date, SYSDATE);
             
@@ -163,9 +153,11 @@ BEGIN
         dbms_output.put_line('Співробітник '||v_first_name||' '||v_last_name||' '||v_job_id||' '||v_department_id||' успішно видалено з системи');
         
         EXCEPTION
+            WHEN no_data_found THEN
+                raise_application_error(-20001,'Переданий співробітник не існує');
             WHEN OTHERS THEN
                 log_util.log_error('fire_an_employee', sqlerrm);
-        
+     
     END;
     
     log_util.log_finish('fire_an_employee');
