@@ -34,6 +34,9 @@ PROCEDURE copy_table(p_source_scheme  IN VARCHAR2,
                      p_list_table     IN VARCHAR2,
                      p_copy_data      IN BOOLEAN DEFAULT FALSE,
                      po_result        OUT VARCHAR2);
+
+--Cинхронізація даних з API
+PROCEDURE api_nbu_sync;
                             
 END util;
 
@@ -333,5 +336,44 @@ BEGIN
             
 END copy_table;
 
+--Cинхронізація даних з API
+PROCEDURE api_nbu_sync IS
+                      
+    v_list_currencies VARCHAR2(2000);
+                       
+BEGIN
+    
+    log_util.log_start('api_nbu_sync');
+    
+    BEGIN
+    
+        SELECT value_text
+        INTO v_list_currencies
+        FROM sys_params
+        WHERE param_name = 'list_currencies';
+        
+    EXCEPTION
+        WHEN OTHERS THEN
+            log_util.log_error('api_nbu_sync', sqlerrm);
+            raise_application_error(-20001, 'Виникла помилка: '||sqlerrm);
+            
+    END;
+    
+    FOR cc IN (SELECT value_list AS curr 
+               FROM TABLE(util.table_from_list(p_list_val => v_list_currencies))) LOOP
+               
+    INSERT INTO cur_exchange (r030, txt, rate, cur, exchangedate)
+    SELECT tt.r030, 
+           tt.txt, 
+           tt.rate, 
+           tt.cur, 
+           tt.exchangedate
+    FROM TABLE(util.get_currency(p_currency => cc.curr)) tt;
+    
+    END LOOP;
+    
+    log_util.log_finish('api_nbu_sync');
+    
+END api_nbu_sync;
 
 END util;
